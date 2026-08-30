@@ -70,7 +70,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const params = new URLSearchParams(location.search);
-const fileId = params.get('f');
+const file = params.get('f');
 const title = params.get('t') || '고전문학 만화';
 const pagesEl = document.getElementById('pages');
 const stateEl = document.getElementById('state');
@@ -81,12 +81,12 @@ function showState(html) {
   stateEl.hidden = false;
 }
 
-if (!fileId) {
+if (!file) {
   showState('작품을 찾을 수 없어요. <a href="index.html">목록으로 돌아가기</a>');
 } else {
   document.getElementById('work-title').textContent = title;
   document.title = title + ' · 고전문학 만화';
-  loadWork(pdfUrlFor(fileId));
+  loadWork(pdfUrlFor(file));
 }
 
 async function loadWork(file) {

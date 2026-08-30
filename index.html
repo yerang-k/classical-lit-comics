@@ -111,15 +111,15 @@ const grid = document.getElementById('grid');
   }
 
   grid.innerHTML = works.map(w => `
-    <a class="work" href="reader.html?f=${encodeURIComponent(w.fileId)}&t=${encodeURIComponent(w.title)}">
-      <div class="cover" id="cover-${w.fileId}"><div class="spinner"></div></div>
+    <a class="work" href="reader.html?f=${encodeURIComponent(w.file)}&t=${encodeURIComponent(w.title)}">
+      <div class="cover" id="cover-${encodeURIComponent(w.file)}"><div class="spinner"></div></div>
       <h3>${w.title}</h3>
     </a>
   `).join('');
 
   works.forEach(async w => {
     try {
-      const pdf = await pdfjsLib.getDocument(pdfUrlFor(w.fileId)).promise;
+      const pdf = await pdfjsLib.getDocument(pdfUrlFor(w.file)).promise;
       const page = await pdf.getPage(1);
       const viewport = page.getViewport({ scale: 1 });
       const scale = 480 / viewport.width;
@@ -128,11 +128,11 @@ const grid = document.getElementById('grid');
       canvas.width = scaledViewport.width;
       canvas.height = scaledViewport.height;
       await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
-      const cover = document.getElementById('cover-' + w.fileId);
+      const cover = document.getElementById('cover-' + encodeURIComponent(w.file));
       cover.innerHTML = '';
       cover.appendChild(canvas);
     } catch (err) {
-      console.error('표지 렌더 실패:', w.fileId, err);
+      console.error('표지 렌더 실패:', w.file, err);
     }
   });
 })();
