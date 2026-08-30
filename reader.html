@@ -41,6 +41,8 @@
 
   .state{padding:80px 24px;text-align:center;color:var(--ink-dim);font-size:.92rem;background:var(--bg)}
   .state a{color:var(--accent);font-weight:700;text-decoration:none}
+  .reader-footer{background:var(--bg);text-align:center;padding:28px 20px 40px;
+    color:var(--ink-dim);font-size:.76rem;border-top:1px solid var(--line)}
 
   @media (prefers-reduced-motion:reduce){
     .spinner span{animation:none}
@@ -114,6 +116,12 @@ async function loadWork(file) {
     slot.innerHTML = '<div class="spinner"><span></span></div>';
     pagesEl.appendChild(slot);
   }
+
+  const footer = document.createElement('div');
+  footer.className = 'reader-footer';
+  footer.innerHTML = '고전문학 만화 &copy; 2026 KIMYERANG.<br>' +
+    '본 앱은 자유롭게 사용할 수 있으나, 저작자의 허락 없는<br>복제·배포·수정은 금지합니다.';
+  pagesEl.appendChild(footer);
 
   // 화면에 곧 들어올 페이지를 미리 렌더링(넉넉한 rootMargin)
   const renderObserver = new IntersectionObserver(entries => {
