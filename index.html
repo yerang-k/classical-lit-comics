@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고전문학 만화</title>
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --bg:#f6f7fb; --paper:#ffffff; --ink:#14161f; --ink-dim:#6b7080;
+    --line:#e7e9f2; --accent:#3348d1; --accent-dark:#26379e; --accent-soft:#e8ecfc;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0b0d14; --paper:#12141f; --ink:#eef0f8; --ink-dim:#8d92a8;
+      --line:#232636; --accent:#6b82ff; --accent-dark:#8fa0ff; --accent-soft:#1b2140;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding-inline:24px}
+
+  nav.topbar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 82%,transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav.topbar .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+  .brand{font-weight:800;font-size:1.02rem;color:var(--ink);letter-spacing:-.01em;text-decoration:none}
+  .navlinks a{font-size:.84rem;font-weight:700;color:var(--ink-dim);text-decoration:none;
+    padding:7px 14px;border-radius:999px;transition:background .15s,color .15s}
+  .navlinks a:hover{background:var(--accent-soft);color:var(--accent)}
+
+  .hero{padding:56px 0 40px;text-align:center}
+  .accent-bar{width:34px;height:5px;border-radius:999px;background:var(--accent);margin:0 auto 22px}
+  h1{font-weight:800;font-size:clamp(1.5rem,5vw,2.2rem);line-height:1.32;margin:0 0 12px;letter-spacing:-.02em}
+  .lede{margin:0 auto;max-width:32em;color:var(--ink-dim);font-size:1rem}
+
+  main{padding-bottom:72px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:18px}
+  .work{display:block;text-decoration:none;color:inherit}
+  .cover{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:var(--paper);
+    border:1px solid var(--line);box-shadow:0 1px 2px rgb(20 22 31 / .04);
+    transition:transform .18s,box-shadow .18s,border-color .18s;display:flex;align-items:center;justify-content:center}
+  .cover canvas{width:100%;height:100%;object-fit:cover;display:block}
+  .work:hover .cover{transform:translateY(-4px);box-shadow:0 20px 36px -12px rgb(20 22 31 / .16);border-color:var(--accent)}
+  .cover .spinner{width:22px;height:22px;border-radius:999px;border:2.5px solid var(--line);
+    border-top-color:var(--accent);animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .work h3{margin:12px 2px 0;font-size:.94rem;font-weight:700;letter-spacing:-.01em}
+
+  .empty{grid-column:1/-1;text-align:center;color:var(--ink-dim);padding:40px 0;font-size:.92rem}
+
+  footer{text-align:center;padding:32px 20px 48px;color:var(--ink-dim);font-size:.78rem;border-top:1px solid var(--line)}
+
+  @media (prefers-reduced-motion:reduce){
+    .cover,.spinner{transition:none;animation:none}
+  }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top">고전문학 만화</a>
+    <div class="navlinks">
+      <a href="https://yerang-k.github.io/classical-lit-hub/">공부방으로</a>
+    </div>
+  </div>
+</nav>
+
+<div id="top" class="hero">
+  <div class="wrap">
+    <div class="accent-bar" aria-hidden="true"></div>
+    <h1>고전문학을 만화로 읽다</h1>
+    <p class="lede">작품을 눌러서 바로 넘겨보세요. 계속 새 작품을 추가할 예정이에요.</p>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer>
+  고전문학 만화 &copy; 2026 KIMYERANG.<br>
+  본 앱은 자유롭게 사용할 수 있으나, 저작자의 허락 없는<br>
+  복제·배포·수정은 금지합니다.
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="works.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const grid = document.getElementById('grid');
+
+if (!WORKS.length) {
+  grid.innerHTML = '<div class="empty">아직 등록된 작품이 없어요</div>';
+} else {
+  grid.innerHTML = WORKS.map(w => `
+    <a class="work" href="reader.html?w=${encodeURIComponent(w.slug)}">
+      <div class="cover" id="cover-${w.slug}"><div class="spinner"></div></div>
+      <h3>${w.title}</h3>
+    </a>
+  `).join('');
+
+  WORKS.forEach(async w => {
+    try {
+      const pdf = await pdfjsLib.getDocument(w.file).promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 1 });
+      const scale = 480 / viewport.width;
+      const scaledViewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = scaledViewport.width;
+      canvas.height = scaledViewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
+      const cover = document.getElementById('cover-' + w.slug);
+      cover.innerHTML = '';
+      cover.appendChild(canvas);
+    } catch (err) {
+      console.error('표지 렌더 실패:', w.slug, err);
+    }
+  });
+}
+</script>
+
+</body>
+</html>

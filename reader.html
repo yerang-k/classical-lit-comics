@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고전문학 만화</title>
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --bg:#f6f7fb; --paper:#ffffff; --ink:#14161f; --ink-dim:#6b7080;
+    --line:#e7e9f2; --accent:#3348d1; --accent-dark:#26379e; --accent-soft:#e8ecfc;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0b0d14; --paper:#12141f; --ink:#eef0f8; --ink-dim:#8d92a8;
+      --line:#232636; --accent:#6b82ff; --accent-dark:#8fa0ff; --accent-soft:#1b2140;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#000;color:var(--ink);
+    font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif}
+
+  nav.topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;
+    height:52px;padding-inline:14px;background:color-mix(in srgb,var(--bg) 92%,transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .back{display:flex;align-items:center;gap:4px;color:var(--ink);text-decoration:none;font-weight:700;font-size:.9rem}
+  .back svg{width:18px;height:18px}
+  .title{font-weight:800;font-size:.92rem;color:var(--ink);letter-spacing:-.01em;
+    position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap}
+  .counter{font-size:.78rem;font-weight:700;color:var(--ink-dim);background:var(--accent-soft);
+    padding:4px 10px;border-radius:999px;font-variant-numeric:tabular-nums}
+
+  #pages{max-width:720px;margin:0 auto}
+  .slot{position:relative;background:var(--paper);border-bottom:1px solid #000}
+  .slot canvas{display:block;width:100%;height:auto}
+  .slot .spinner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  .spinner span{width:26px;height:26px;border-radius:999px;border:2.5px solid var(--line);
+    border-top-color:var(--accent);animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .state{padding:80px 24px;text-align:center;color:var(--ink-dim);font-size:.92rem;background:var(--bg)}
+  .state a{color:var(--accent);font-weight:700;text-decoration:none}
+
+  @media (prefers-reduced-motion:reduce){
+    .spinner span{animation:none}
+  }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a class="back" href="index.html">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+    목록
+  </a>
+  <div class="title" id="work-title"></div>
+  <div class="counter" id="counter">- / -</div>
+</nav>
+
+<div id="pages"></div>
+<div class="state" id="state" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="works.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const slug = new URLSearchParams(location.search).get('w');
+const work = WORKS.find(w => w.slug === slug);
+const pagesEl = document.getElementById('pages');
+const stateEl = document.getElementById('state');
+const counterEl = document.getElementById('counter');
+
+function showState(html) {
+  stateEl.innerHTML = html;
+  stateEl.hidden = false;
+}
+
+if (!work) {
+  showState('작품을 찾을 수 없어요. <a href="index.html">목록으로 돌아가기</a>');
+} else {
+  document.getElementById('work-title').textContent = work.title;
+  document.title = work.title + ' · 고전문학 만화';
+  loadWork(work.file);
+}
+
+async function loadWork(file) {
+  let pdf, numPages;
+  try {
+    pdf = await pdfjsLib.getDocument(file).promise;
+    numPages = pdf.numPages;
+  } catch (err) {
+    console.error('PDF 로드 실패:', err);
+    showState('작품을 불러오지 못했어요. <a href="index.html">목록으로 돌아가기</a>');
+    return;
+  }
+
+  counterEl.textContent = '1 / ' + numPages;
+
+  const pageRefs = new Array(numPages + 1);
+  const rendered = new Array(numPages + 1).fill(false);
+
+  for (let i = 1; i <= numPages; i++) {
+    const page = await pdf.getPage(i);
+    pageRefs[i] = page;
+    const vp = page.getViewport({ scale: 1 });
+
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    slot.dataset.page = i;
+    slot.style.aspectRatio = vp.width + ' / ' + vp.height;
+    slot.innerHTML = '<div class="spinner"><span></span></div>';
+    pagesEl.appendChild(slot);
+  }
+
+  // 화면에 곧 들어올 페이지를 미리 렌더링(넉넉한 rootMargin)
+  const renderObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const i = Number(entry.target.dataset.page);
+      if (!rendered[i]) {
+        rendered[i] = true;
+        renderPage(i, entry.target);
+      }
+    });
+  }, { rootMargin: '1000px 0px 1000px 0px' });
+
+  // 여러 페이지가 동시에 걸쳐 보일 수 있으므로, 그중 가장 많이 보이는 페이지로 카운터 갱신
+  const visibleRatios = new Map();
+  const viewObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      const i = Number(entry.target.dataset.page);
+      if (entry.isIntersecting) visibleRatios.set(i, entry.intersectionRatio);
+      else visibleRatios.delete(i);
+    });
+    let best = null, bestRatio = 0;
+    visibleRatios.forEach((ratio, i) => {
+      if (ratio > bestRatio) { bestRatio = ratio; best = i; }
+    });
+    if (best != null) counterEl.textContent = best + ' / ' + numPages;
+  }, { threshold: [0, 0.25, 0.5, 0.75, 1] });
+
+  pagesEl.querySelectorAll('.slot').forEach(el => {
+    renderObserver.observe(el);
+    viewObserver.observe(el);
+  });
+
+  async function renderPage(i, slot) {
+    try {
+      const page = pageRefs[i];
+      const cssWidth = slot.clientWidth;
+      const baseViewport = page.getViewport({ scale: 1 });
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const scale = (cssWidth * dpr) / baseViewport.width;
+      const viewport = page.getViewport({ scale });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+      slot.innerHTML = '';
+      slot.style.aspectRatio = '';
+      slot.appendChild(canvas);
+    } catch (err) {
+      console.error('페이지 렌더 실패:', i, err);
+    }
+  }
+}
+</script>
+
+</body>
+</html>
