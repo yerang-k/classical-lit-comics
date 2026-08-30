@@ -1,5 +1,13 @@
-// 작품을 추가할 때는 이 배열에 한 줄만 더하면 됩니다.
-// slug: 주소에 쓰이는 영문 식별자, title: 화면에 보이는 제목, file: works/ 폴더 안 PDF 경로
-const WORKS = [
-  { slug: 'chunhyangjeon', title: '춘향전', file: 'works/chunhyangjeon.pdf' }
-];
+// 작품 목록은 구글 시트에서 불러온다. 새 작품 등록은 시트에 "제목 + PDF 링크"를 한 줄 추가하면 된다.
+// 배포한 앱스스크립트 웹앱 주소(.../exec)를 여기에 붙여넣는다.
+const WORKS_API_URL = 'PASTE_APPS_SCRIPT_EXEC_URL_HERE';
+
+async function getWorks() {
+  const res = await fetch(WORKS_API_URL);
+  if (!res.ok) throw new Error('작품 목록을 불러오지 못했습니다');
+  return res.json();
+}
+
+function pdfUrlFor(fileId) {
+  return 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(fileId);
+}
